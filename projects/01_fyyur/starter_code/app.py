@@ -57,6 +57,14 @@ class Artist(db.Model):
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
+class Show(db.Model):
+    __tablename__ = 'Show'
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'), primary_key=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey('Venue.id'), primary_key=True)
+    start_time = db.Column(db.DateTime, primary_key=True)
+    artist = db.relationship("Artist", backref="venues")
+    venue = db.relationship("Venue", backref="artists")
+
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
 #----------------------------------------------------------------------------#
@@ -523,6 +531,13 @@ def create_shows():
 
 @app.route('/shows/create', methods=['POST'])
 def create_show_submission():
+  artist_id = request.form.get('artist_id',1)
+  venue_id = request.form.get('venue_id',1)
+  start_time = request.form.get('start_time') #add default time
+
+  artist = Artist.query.get(id=artist_id).first()
+  venue = Venue.query.get(id=venue_id).first()
+  
   # called to create new shows in the db, upon submitting new show listing form
   # TODO: insert form data as a new Show record in the db, instead
 
