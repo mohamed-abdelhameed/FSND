@@ -12,6 +12,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from flask_migrate import Migrate
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -22,7 +23,7 @@ app.config.from_object('config')
 db = SQLAlchemy(app)
 
 # TODO: connect to a local postgresql database
-
+migrate = Migrate(app,db)
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
@@ -412,12 +413,34 @@ def create_artist_form():
 
 @app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
+  data={}
+  try:
+    name = request.form.get('name','')
+    genres = request.form.getlist('genres')
+    city = request.form.get('city','')
+    state = request.form.get('state','')
+    phone = request.form.get('phone','')
+    facebook_link = request.form.get('facebook_link','')
+    image_link = request.form.get('image_link','')
+
+    artist = Artist(name=name,genres=genres,city=city,state=state,phone=phone,facebook_link=facebook_link,image_link=image_link)
+    data['name'] = artist.name
+    db.session.add(artist)
+
+    db.session.commit()
+    flash('Artist ' + data['name'] + ' was successfully listed!')
+  except:
+    db.session.rollback()
+    flash('An error occurred. Artist ' + data['name'] + ' could not be listed.')
+  finally:
+    db.session.close()
+
   # called upon submitting the new artist listing form
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
 
   # on successful db insert, flash success
-  flash('Artist ' + request.form['name'] + ' was successfully listed!')
+  # flash('Artist ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
   # e.g., flash('An error occurred. Artist ' + data.name + ' could not be listed.')
   return render_template('pages/home.html')
