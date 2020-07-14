@@ -89,6 +89,10 @@ app.jinja_env.filters['datetime'] = format_datetime
 def getList(genres):
   return genres.replace('{','').replace('}','').split(',')
 
+def getElementFromListById(list,id):
+  for element in list:
+    if element.id == id:
+      return element
 
 #----------------------------------------------------------------------------#
 # Controllers.
@@ -109,8 +113,9 @@ def venues():
   if (len(venues)>0):
     data.append({'city':venues[0].city,'state':venues[0].state,'venues':[]})
   for venue in venues:
+    shows_data = db.session.query(Shows).join(Venue, Shows.c.venue_id == Venue.id, isouter=True).filter_by(id=venue.id).all()
     num_upcoming_shows = 0
-    for show in venue.shows:
+    for show in shows_data:
       if show.start_time>datetime.today():
         num_upcoming_shows+=1
     curVenue={'id':venue.id,'name':venue.name,'num_upcoming_shows':num_upcoming_shows}
@@ -132,11 +137,12 @@ def search_venues():
   response['count']=len(venues)
   response['data']=[]
   for venue in venues:
+    shows_data = db.session.query(Shows).join(Venue, Shows.c.venue_id == Venue.id, isouter=True).filter_by(id=venue.id).all()
     curVenue={}
     curVenue['id']=venue.id
     curVenue['name']=venue.name
     num_upcoming_shows=0
-    for show in venue.shows:
+    for show in shows_data:
       if (show.start_time>datetime.today()):
         num_upcoming_shows+=1
     curVenue['num_upcoming_shows']=num_upcoming_shows
@@ -151,6 +157,7 @@ def show_venue(venue_id):
   # TODO: replace with real venue data from the venues table, using venue_id
 
   venue = Venue.query.get(venue_id)
+  shows_data = db.session.query(Shows).join(Venue, Shows.c.venue_id == Venue.id, isouter=True).filter_by(id=venue_id).all()
 
   data = {}
 
@@ -166,11 +173,12 @@ def show_venue(venue_id):
 
   past_shows=[]
   upcoming_shows=[]
-  for show in venue.shows :
+  for show in shows_data :
+    artist = getElementFromListById(venue.artists,show.artist_id)
     curShow={}
-    curShow['artist_id']=show.artist.id
-    curShow['artist_name']=show.artist.name
-    curShow['artist_image_link']=show.artist.image_link
+    curShow['artist_id']=show.artist_id
+    curShow['artist_name']=artist.name
+    curShow['artist_image_link']=artist.image_link
     curShow['start_time']=str(show.start_time)
     if (show.start_time<datetime.today()):
       past_shows.append(curShow)
@@ -257,8 +265,9 @@ def search_artists():
     curArtist={}
     curArtist['id']=artist.id
     curArtist['name']=artist.name
+    shows_data = db.session.query(Shows).join(Artist, Shows.c.artist_id == Artist.id, isouter=True).filter_by(id=artist.id).all()
     num_upcoming_shows=0
-    for show in artist.shows:
+    for show in shows_data:
       if (show.start_time>datetime.today()):
         num_upcoming_shows+=1
     curArtist['num_upcoming_shows']=num_upcoming_shows
@@ -268,41 +277,35 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  # data = Artist.query.join(shows).join(Venue).filter((shows.c.artist_id == Artist.id) & (shows.c.venue_id == Venue.id)).all()
-  # db.session.query(Artist).join(shows, shows.artist_id == Artist.id, isouter=True)
+  artist = Artist.query.get(artist_id)
+  shows_data = db.session.query(Shows).join(Artist, Shows.c.artist_id == Artist.id, isouter=True).filter_by(id=artist_id).all()
 
-  # data = db.session.query(Artist).options(joinedload('shows')).all()
+  data={}
+  data['id'] = artist.id
+  data['name'] = artist.name
+  data['genres'] = getList(artist.genres)
+  data['state'] = artist.state
+  data['phone'] = artist.phone
+  data['facebook_link'] = artist.facebook_link
 
-  data = db.session.query(Artist).outerjoin(shows).all()
+  past_shows=[]
+  upcoming_shows=[]
+  for show in shows_data :
+    venue = getElementFromListById(artist.venues,show.venue_id)
+    curShow={}
+    curShow['venue_id']=show.venue_id
+    curShow['venue_name']=venue.name
+    curShow['venue_image_link']=venue.image_link
+    curShow['start_time']=str(show.start_time)
+    if (show.start_time<datetime.today()):
+      past_shows.append(curShow)
+    else :
+      upcoming_shows.append(curShow)
 
-  print(data[0].shows)
-  # artist = Artist.query.get(artist_id)
-
-  # data={}
-  # data['id'] = artist.id
-  # data['name'] = artist.name
-  # data['genres'] = getList(artist.genres)
-  # data['state'] = artist.state
-  # data['phone'] = artist.phone
-  # data['facebook_link'] = artist.facebook_link
-  
-  # past_shows=[]
-  # upcoming_shows=[]
-  # for show in artist.shows :
-  #   curShow={}
-  #   curShow['venue_id']=show.venue.id
-  #   curShow['venue_name']=show.venue.name
-  #   curShow['venue_image_link']=show.venue.image_link
-  #   curShow['start_time']=str(show.start_time)
-  #   if (show.start_time<datetime.today()):
-  #     past_shows.append(curShow)
-  #   else :
-  #     upcoming_shows.append(curShow)
-
-  # data['past_shows'] = past_shows
-  # data['upcoming_shows'] = upcoming_shows
-  # data['past_shows_count'] = len(past_shows)
-  # data['upcoming_shows_count'] = len(upcoming_shows)
+  data['past_shows'] = past_shows
+  data['upcoming_shows'] = upcoming_shows
+  data['past_shows_count'] = len(past_shows)
+  data['upcoming_shows_count'] = len(upcoming_shows)
   
   return render_template('pages/show_artist.html', artist=data)
 
@@ -389,15 +392,17 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
-  shows = Show.query.all()
+  shows = db.session.query(Shows).all()
   data = []
   for show in shows:
     curShow = {}
-    curShow['venue_id'] = show.venue.id
-    curShow['venue_name'] = show.venue.name
-    curShow['artist_id'] = show.artist.id
-    curShow['artist_name'] = show.artist.name
-    curShow['artist_image_link'] = show.artist.image_link
+    artist = Artist.query.get(show.artist_id)
+    venue = Venue.query.get(show.venue_id)
+    curShow['venue_id'] = show.venue_id
+    curShow['venue_name'] = venue.name
+    curShow['artist_id'] = show.artist_id
+    curShow['artist_name'] = artist.name
+    curShow['artist_image_link'] = artist.image_link
     curShow['start_time'] = str(show.start_time)
     data.append(curShow)
   # displays list of shows at /shows
