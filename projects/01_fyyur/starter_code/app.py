@@ -8,6 +8,7 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import joinedload
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -28,7 +29,7 @@ migrate = Migrate(app,db)
 # Models.
 #----------------------------------------------------------------------------#
 
-shows = db.Table('shows',
+Shows = db.Table('shows',
                 db.Column('id', db.Integer, primary_key=True),
                 db.Column('artist_id', db.Integer, db.ForeignKey('artists.id'), nullable=False),
                 db.Column('venue_id', db.Integer, db.ForeignKey('venues.id'), nullable=False),
@@ -65,7 +66,7 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
-    venues = db.relationship('Venues', secondary=shows, backref='artists')
+    venues = db.relationship('Venue', secondary=Shows, backref='artists', lazy = 'joined')
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
@@ -267,33 +268,41 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  artist = Artist.query.get(artist_id)
+  # data = Artist.query.join(shows).join(Venue).filter((shows.c.artist_id == Artist.id) & (shows.c.venue_id == Venue.id)).all()
+  # db.session.query(Artist).join(shows, shows.artist_id == Artist.id, isouter=True)
 
-  data={}
-  data['id'] = artist.id
-  data['name'] = artist.name
-  data['genres'] = getList(artist.genres)
-  data['state'] = artist.state
-  data['phone'] = artist.phone
-  data['facebook_link'] = artist.facebook_link
+  # data = db.session.query(Artist).options(joinedload('shows')).all()
+
+  data = db.session.query(Artist).outerjoin(shows).all()
+
+  print(data[0].shows)
+  # artist = Artist.query.get(artist_id)
+
+  # data={}
+  # data['id'] = artist.id
+  # data['name'] = artist.name
+  # data['genres'] = getList(artist.genres)
+  # data['state'] = artist.state
+  # data['phone'] = artist.phone
+  # data['facebook_link'] = artist.facebook_link
   
-  past_shows=[]
-  upcoming_shows=[]
-  for show in artist.shows :
-    curShow={}
-    curShow['venue_id']=show.venue.id
-    curShow['venue_name']=show.venue.name
-    curShow['venue_image_link']=show.venue.image_link
-    curShow['start_time']=str(show.start_time)
-    if (show.start_time<datetime.today()):
-      past_shows.append(curShow)
-    else :
-      upcoming_shows.append(curShow)
+  # past_shows=[]
+  # upcoming_shows=[]
+  # for show in artist.shows :
+  #   curShow={}
+  #   curShow['venue_id']=show.venue.id
+  #   curShow['venue_name']=show.venue.name
+  #   curShow['venue_image_link']=show.venue.image_link
+  #   curShow['start_time']=str(show.start_time)
+  #   if (show.start_time<datetime.today()):
+  #     past_shows.append(curShow)
+  #   else :
+  #     upcoming_shows.append(curShow)
 
-  data['past_shows'] = past_shows
-  data['upcoming_shows'] = upcoming_shows
-  data['past_shows_count'] = len(past_shows)
-  data['upcoming_shows_count'] = len(upcoming_shows)
+  # data['past_shows'] = past_shows
+  # data['upcoming_shows'] = upcoming_shows
+  # data['past_shows_count'] = len(past_shows)
+  # data['upcoming_shows_count'] = len(upcoming_shows)
   
   return render_template('pages/show_artist.html', artist=data)
 
@@ -410,9 +419,11 @@ def create_show_submission():
     venue_id = request.form.get('venue_id', 1)
     start_time = request.form.get('start_time', datetime.today())
 
-    show = Show(artist_id=artist_id,venue_id=venue_id,start_time=start_time)
-  
-    db.session.add(show)
+
+    statement = Shows.insert().values(artist_id=artist_id,venue_id=venue_id,start_time=start_time)
+    # had to use that expression and not appending venue to artist.venues 
+    # because shows table contains extra column "start_time"
+    db.session.execute(statement)
 
     db.session.commit()
     flash('Show was successfully listed!')
