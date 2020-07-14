@@ -2,3 +2,10 @@ babel
 python-dateutil==2.6.0
 flask-moment
 flask-wtf
+Flask
+psycopg2-binary
+SQLAlchemy
+Flask-Migrate
+Flask-SQLAlchemy
+
+
