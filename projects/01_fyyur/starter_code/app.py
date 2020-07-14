@@ -28,6 +28,17 @@ migrate = Migrate(app,db)
 # Models.
 #----------------------------------------------------------------------------#
 
+shows = db.Table('shows',
+                db.Column('id', db.Integer, primary_key=True),
+                db.Column('artist_id', db.Integer, db.ForeignKey('artists.id'), nullable=False),
+                db.Column('venue_id', db.Integer, db.ForeignKey('venues.id'), nullable=False),
+                db.Column('start_time', db.DateTime, nullable=False),
+                db.UniqueConstraint('artist_id', 'venue_id', 'start_time'),
+                db.UniqueConstraint('artist_id', 'start_time')
+                # didn't add venue with start_time to unique constraint as a venue could have multiple halls , 
+                # so more than artist/band performing at the same time at the same venue
+                )
+
 class Venue(db.Model):
     __tablename__ = 'venues'
 
@@ -54,16 +65,9 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    venues = db.relationship('Venues', secondary=shows, backref='artists')
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-class Show(db.Model):
-    __tablename__ = 'shows'
-    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), primary_key=True)
-    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), primary_key=True)
-    start_time = db.Column(db.DateTime, primary_key=True)
-    artist = db.relationship("Artist", backref="shows")
-    venue = db.relationship("Venue", backref="shows")
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
 
