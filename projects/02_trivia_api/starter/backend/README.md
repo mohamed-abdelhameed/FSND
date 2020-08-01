@@ -72,9 +72,13 @@ This README is missing documentation of your endpoints. Below is an example for 
 
 Endpoints
 GET '/categories'
-GET ...
-POST ...
-DELETE ...
+GET '/categories/<cat_id>/questions'
+GET '/questions'
+POST '/questions'
+POST '/questions/searches'
+DELETE '/questions/<question_id>'
+PUT '/questions/<question_id>'
+POST '/quizzes'
 
 GET '/categories'
 - Fetches a dictionary of categories in which the keys are the ids and the value is the corresponding string of the category
@@ -87,6 +91,131 @@ GET '/categories'
 '5' : "Entertainment",
 '6' : "Sports"}
 
+GET '/categories/<cat_id>/questions'
+- Fetches questions based on category
+- Request Arguments: category id
+curl -X GET http://localhost:3000/categories/1/questions
+- Returns: An array of questions that belong to the requested category id and the category object itself
+  "current_category": {
+    "id": 1,
+    "type": "Science"
+  },
+  "questions": [
+    {
+      "answer": "The Liver",
+      "category": 1,
+      "difficulty": 4,
+      "id": 20,
+      "question": "What is the heaviest organ in the human body?"
+    },
+    {
+      "answer": "Alexander Fleming",
+      "category": 1,
+      "difficulty": 3,
+      "id": 21,
+      "question": "Who discovered penicillin?"
+    },
+    {
+      "answer": "Blood",
+      "category": 1,
+      "difficulty": 4,
+      "id": 22,
+      "question": "Hematology is a branch of medicine involving the study of what?"
+    }
+  ]
+
+GET '/questions'
+- Fetches questions, including pagination (every 10 questions)
+- Request Arguments: category id and page
+curl -X GET http://localhost:3000/questions?category_id=1
+- Returns: A list of questions, number of total questions, current category, categories. 
+  "categories": {
+    "1": "Science",
+    "2": "Art",
+    "3": "Geography",
+    "4": "History",
+    "5": "Entertainment",
+    "6": "Sports"
+  },
+  "current_category": 1,
+  "questions": [
+    {
+      "answer": "The Liver",
+      "category": 1,
+      "difficulty": 4,
+      "id": 20,
+      "question": "What is the heaviest organ in the human body?"
+    },
+    {
+      "answer": "Alexander Fleming",
+      "category": 1,
+      "difficulty": 3,
+      "id": 21,
+      "question": "Who discovered penicillin?"
+    },
+    {
+      "answer": "Blood",
+      "category": 1,
+      "difficulty": 4,
+      "id": 22,
+      "question": "Hematology is a branch of medicine involving the study of what?"
+    }
+  ],
+  "total_questions": 3
+}
+
+POST '/questions'
+- Posts a new question, which will require the question and answer text, category, and difficulty score.
+- Request Arguments: json object containing required data to create a questions (question, answer, category, difficulty)
+curl -X POST -H "Content-Type: application/json" -d '{"question":"What is that ?","answer":"A question","category":1,"difficulty":1}'  http://localhost:3000/questions
+- Returns: None
+
+POST '/questions/searches'
+- Get questions based on a search term.
+- Request Arguments: json object containing search term
+curl -X POST -H "Content-Type: application/json" -d '{"searchTerm":"title"}'  http://localhost:3000/questions/searches
+- Return: Array of questions for whom the search term is a substring of the question. 
+"questions": [
+    {
+      "answer": "Maya Angelou",
+      "category": 4,
+      "difficulty": 2,
+      "id": 5,
+      "question": "Whose autobiography is entitled 'I Know Why the Caged Bird Sings'?"
+    },
+    {
+      "answer": "Edward Scissorhands",
+      "category": 5,
+      "difficulty": 3,
+      "id": 6,
+      "question": "What was the title of the 1990 fantasy directed by Tim Burton about a young man with multi-bladed appendages?"
+    }
+  ]
+
+DELETE '/questions/<question_id>'
+- Deletes question using a question ID.
+- Request Arguments: id of question to be deleted
+curl -X DELETE http://localhost:3000/questions/23
+- Return: None 
+
+PUT '/questions/<question_id>'
+- Overwrites question.
+- Request Arguments: id of question to be overwritten and json object containing required data to overwrite/(fully update) a question (question, answer, category, difficulty)
+curl -X PUT -H "Content-Type: application/json" -d '{"question":"What is that ?","answer":"A question","category":1,"difficulty":1}'  http://localhost:3000/questions/23
+- Return: None 
+
+POST '/quizzes'
+- Fetches questions to play the quiz.
+- Request Arguments: json object containing category and an array containing previous questions 
+curl -X POST -H "Content-Type: application/json" -d '{"quiz_category":{"id":1,"type":"Science"}, "previous_questions":[]}'  http://localhost:3000/quizzes
+- Return: a random question within the given category, if provided, and that is not one of the previous questions.
+"question": {
+    "answer": "The Liver",
+    "category": 1,
+    "difficulty": 4,
+    "id": 20,
+    "question": "What is the heaviest organ in the human body?"
+  }
 ```
 
 

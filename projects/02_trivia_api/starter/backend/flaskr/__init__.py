@@ -98,7 +98,13 @@ def create_app(test_config=None):
       'success': True
     })
 
-  #update question endpoint
+  '''
+  @TODO: 
+  Create an endpoint to Overwrite question. 
+
+  TEST: as no frontend for this request , it can be tested only using curl
+  example: curl -X PUT -H "Content-Type: application/json" -d '{"question":"What is that ?","answer":"A question","category":1,"difficulty":1}'  http://localhost:3000/questions/23 
+  '''
   @app.route('/questions/<question_id>', methods=['PUT'])
   def overwriteQuestion(question_id):
     try:
@@ -175,6 +181,7 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
+  #edited the endpoints by adding 'searches' to differentiate it from POST request for adding new question
   @app.route('/questions/searches',methods=['POST'])
   def searchQuestions():
     data = request.get_json()
@@ -189,8 +196,7 @@ def create_app(test_config=None):
     questions = [question.format() for question in results]
     return jsonify({
       'success': True,
-      'questions': questions,
-      'total_questions': len(questions)
+      'questions': questions
     })
   '''
   @TODO: 
@@ -202,18 +208,14 @@ def create_app(test_config=None):
   '''
   @app.route('/categories/<cat_id>/questions')
   def getQuestionsByCategory(cat_id):
-    page = request.args.get('page', 1, type=int)
     results = Question.query.filter(Question.category == cat_id).order_by(Question.id).all()
     if len(results) == 0:
       abort(404)
     questions = [question.format() for question in results]
-    start = QUESTIONS_PER_PAGE*(page-1)
-    end = QUESTIONS_PER_PAGE*page
     category = Category.query.filter(Category.id == cat_id).order_by(Category.id).one()
     return jsonify({
       'success': True,
-      'questions': questions[start:end],
-      'total_questions': len(questions),
+      'questions': questions,
       'current_category': category.format()
     })
   '''
@@ -232,6 +234,7 @@ def create_app(test_config=None):
     data = request.get_json()
     if data is None:
       abort(400)
+    print(data)
     previous_questions = data.get('previous_questions')
     quiz_category = data.get('quiz_category')
     if quiz_category.get('id')!=0:
